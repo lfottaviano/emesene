@@ -29,6 +29,7 @@ import logging
 
 import Tooltips
 from gui.base import Plus
+gtk.gdk.threads_init()
 
 log = logging.getLogger('gtkui.ContactList')
 
@@ -413,7 +414,6 @@ class ContactList(gui.ContactList, gtk.TreeView):
 
     def add_group(self, group, special=False):
         '''add a group to the contact list'''
-
         try:
             weight = int(self.session.config.d_weights.get(group.identifier,
                 0))
@@ -426,24 +426,29 @@ class ContactList(gui.ContactList, gtk.TreeView):
             self.format_group(group),
             False, None, False, weight, special)
 
+        gtk.gdk.threads_enter()
         for row in self._model:
             obj = row[1]
             if isinstance(obj, e3.Group):
                 if obj.name == group.name:
                     log.debug('Trying to add an existing group! ' + obj.name)
+                    gtk.gdk.threads_leave()
                     return row.iter
 
         itr = self._model.append(None, group_data)
+        gtk.gdk.threads_leave()
 
         return itr
 
     def remove_group(self, group):
         '''remove a group from the contact list'''
+        gtk.gdk.threads_enter()
         for row in self._model:
             obj = row[1]
 
             if isinstance(obj, e3.Group) and obj.name == group.name:
                 del self._model[row.iter]
+        gtk.gdk.threads_leave()
 
     def add_contact(self, contact, group=None):
         '''add a contact to the contact list, add it to the group if
@@ -476,7 +481,11 @@ class ContactList(gui.ContactList, gtk.TreeView):
             self.offline_group.contacts.append(contact.account)
             self.update_offline_group()
 
-            return self._model.append(self.offline_group_iter, contact_data)
+            gtk.gdk.threads_enter()
+            return_iter = self._model.append(self.offline_group_iter, contact_data)
+            gtk.gdk.threads_leave()
+
+            return return_iter
 
         # if we are in order by status mode and contact is online,
         # we add online contacts to their online group :)
@@ -492,7 +501,10 @@ class ContactList(gui.ContactList, gtk.TreeView):
             self.online_group.contacts.append(contact.account)
             self.update_online_group()
 
-            return self._model.append(self.online_group_iter, contact_data)
+            gtk.gdk.threads_enter()
+            return_iter = self._model.append(self.online_group_iter, contact_data)
+            gtk.gdk.threads_leave()
+            return return_iter
 
         # if it has no group and we are in order by group then add it to the
         # special group "No group"
@@ -501,18 +513,26 @@ class ContactList(gui.ContactList, gtk.TreeView):
                 self.no_group.contacts.append(contact.account)
                 self.update_no_group()
 
-                return self._model.append(self.no_group_iter, contact_data)
+                gtk.gdk.threads_enter()
+                return_iter = self._model.append(self.no_group_iter, contact_data)
+                gtk.gdk.threads_leave()
+
+                return return_iter
             else:
                 self.no_group = e3.Group(_("No group"), identifier='0', type_ = e3.Group.NONE)
                 self.no_group_iter = self.add_group(self.no_group, True)
                 self.no_group.contacts.append(contact.account)
                 self.update_no_group()
 
-                return self._model.append(self.no_group_iter, contact_data)
+                gtk.gdk.threads_enter()
+                return_iter = self._model.append(self.no_group_iter, contact_data)
+                gtk.gdk.threads_leave()
 
+                return return_iter
         # if no group add it to the root, but check that it's not on a group
         # or in the root already
         if not group or self.order_by_status:
+            gtk.gdk.threads_enter()
             for row in self._model:
                 obj = row[1]
                 # check on group
@@ -520,12 +540,17 @@ class ContactList(gui.ContactList, gtk.TreeView):
                     for contact_row in row.iterchildren():
                         con = contact_row[1]
                         if con.account == contact.account:
+                            gtk.gdk.threads_leave()
                             return contact_row.iter
                 # check on the root
                 elif isinstance(obj, e3.Contact) and obj.account == contact.account:
+                    gtk.gdk.threads_leave()
                     return row.iter
 
-            return self._model.append(None, contact_data)
+            return_iter = self._model.append(None, contact_data)
+            gtk.gdk.threads_leave()
+
+            return return_iter
 
         for row in self._model:
             obj = row[1]
@@ -549,6 +574,7 @@ class ContactList(gui.ContactList, gtk.TreeView):
 
                 return return_iter
 
+
         else: #######WTF??? where does this belong???
             self.add_group(group)
             result = self.add_contact(contact, group)
@@ -561,6 +587,7 @@ class ContactList(gui.ContactList, gtk.TreeView):
         then remove him from all groups'''
         if not group:
             # go though the groups and the contacts without group
+            gtk.gdk.threads_enter()
             for row in self._model:
                 obj = row[1]
                 # if we get a group we go through the contacts
@@ -582,9 +609,11 @@ class ContactList(gui.ContactList, gtk.TreeView):
                     del self._model[row.iter]
                     del obj # CHECK!!!!!
 
+            gtk.gdk.threads_leave()
             return
 
         # go though the groups
+        gtk.gdk.threads_enter()
         for row in self._model:
             obj = row[1]
             # if it's the group we are searching
@@ -601,12 +630,18 @@ class ContactList(gui.ContactList, gtk.TreeView):
 
                         self.update_group(group)
 
+        gtk.gdk.threads_leave()
+
+
     def clear(self):
         '''clear the contact list, return True if the list was cleared
         False otherwise (normally returns false when clear is called before
         the contact list is in a coherent state)'''
+        gtk.gdk.threads_enter()
         if not self._model:
+            gtk.gdk.threads_leave()
             return False
+        gtk.gdk.threads_leave()
 
         self.online_group = None
         self.online_group_iter = None
@@ -615,7 +650,9 @@ class ContactList(gui.ContactList, gtk.TreeView):
         self.offline_group = None
         self.offline_group_iter = None
 
+        gtk.gdk.threads_enter()
         self._model.clear()
+        gtk.gdk.threads_leave()
 
         # this is the best place to put this code without putting gtk code
         # on gui.ContactList
@@ -693,8 +730,10 @@ class ContactList(gui.ContactList, gtk.TreeView):
             self.format_group(self.no_group),
             False, None, 0, True, False)
 
+        gtk.gdk.threads_enter()
         self._model[self.no_group_iter] = group_data
         self.update_group(self.no_group)
+        gtk.gdk.threads_leave()
 
     def update_online_group(self):
         '''update the special "Online" group '''
@@ -702,8 +741,10 @@ class ContactList(gui.ContactList, gtk.TreeView):
             self.format_group(self.online_group),
             False, None, 0, True, False)
 
+        gtk.gdk.threads_enter()
         self._model[self.online_group_iter] = group_data
         self.update_group(self.online_group)
+        gtk.gdk.threads_leave()
 
     def update_offline_group(self):
         '''update the special "Offline" group'''
@@ -711,8 +752,10 @@ class ContactList(gui.ContactList, gtk.TreeView):
             self.format_group(self.offline_group),
             False, None, 0, True, False)
 
+        gtk.gdk.threads_enter()
         self._model[self.offline_group_iter] = group_data
         self.update_group(self.offline_group)
+        gtk.gdk.threads_leave()
 
     def un_expand_groups(self):
         ''' restore groups after a search'''
