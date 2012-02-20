@@ -18,7 +18,6 @@
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 import e3
-from threading import Thread
 
 class ContactList(object):
     '''an abstract class that defines the api that the contact list should
@@ -30,6 +29,9 @@ class ContactList(object):
     def __init__(self, session):
         '''class constructor'''
 
+        # Thread pointer for order by requests.
+        self.thread_order_by = None
+
         self.is_searching = False
         # define the class signals
         # the param is the contact object
@@ -37,9 +39,6 @@ class ContactList(object):
         self.group_selected = e3.common.Signal()
         self.contact_menu_selected = e3.common.Signal()
         self.group_menu_selected = e3.common.Signal()
-
-        # Thread pointer for order by requests.
-        self.thread_order_by = None
 
         self.contacts = session.contacts
         self.groups = session.groups
@@ -263,16 +262,11 @@ class ContactList(object):
 
     def _set_order_by_group(self, value):
         '''set the value of order by group'''
-        if not self.thread_order_by is None:
+        if self.fill() == False:
             return
 
         self._order_by_group = value
         self.session.config.b_order_by_group = value
-
-        if self.thread_order_by is None:
-            self.thread_order_by = Thread(target=self.fill)
-            self.thread_order_by.start()
-#        self.fill()
 
     order_by_group = property(fget=_get_order_by_group,
         fset=_set_order_by_group)
@@ -481,7 +475,6 @@ class ContactList(object):
     def fill(self, clear=True):
         '''fill the contact list with the contacts and groups from
         self.contacts and self.groups'''
-
         if clear:
             if not self.clear():
                 return
@@ -497,9 +490,7 @@ class ContactList(object):
         for contact in self.contacts.get_no_group():
             self.add_contact(contact)
 
-        if not self.thread_order_by is None:
-            self.thread_order_by = None
-            print "Thread: thread_order_by going to dead."
+        return True
 
     def clear(self):
         '''clear the contact list, return True if the list was cleared

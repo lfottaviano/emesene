@@ -29,6 +29,8 @@ import logging
 
 import Tooltips
 from gui.base import Plus
+from threading import Thread
+
 gtk.gdk.threads_init()
 
 log = logging.getLogger('gtkui.ContactList')
@@ -50,6 +52,9 @@ class ContactList(gui.ContactList, gtk.TreeView):
         gtk.TreeView.__init__(self)
 
         self.set_enable_search(False) #we enable our searching widget with CTRL+F in MainWindow.py
+
+        # Thread pointer for order by requests.
+        self.thread_order_by = None
 
         self.online_group = None # added
         self.online_group_iter = None # added
@@ -153,6 +158,45 @@ class ContactList(gui.ContactList, gtk.TreeView):
     def _on_collapse(self, treeview, iter_, path):
         group = self.model[path][1]
         self.on_group_collapsed(group)
+
+    def fill(self, clear=True):
+        if not self.thread_order_by is None:
+            ''' 
+            let the current thread finish
+            two threads for the same operation are not supported,
+            this thread can't be stopped whenever other thread wants,
+            otherwise this will end on a deadlock
+            '''
+            return False
+
+        if self.thread_order_by is None:
+            self.thread_order_by = Thread(target=self._threaded_fill, args=(clear,))
+            self.thread_order_by.start()
+            print "thread_order_by started. "
+
+    def _threaded_fill(self, clear=True):
+        '''fill the contact list with the contacts and groups from
+        self.contacts and self.groups'''
+
+        if clear:
+            if not self.clear():
+                return
+
+        for group in self.groups.values():
+            # get a list of contact objects from a list of accounts
+            contacts = self.contacts.get_contacts(group.contacts)
+            if not self.order_by_status:
+                self.add_group(group)
+            for contact in contacts:
+                self.add_contact(contact, group)
+
+        for contact in self.contacts.get_no_group():
+            self.add_contact(contact)
+
+        if not self.thread_order_by is None:
+            self.thread_order_by = None
+            print "Thread: thread_order_by going to dead."
+
 
     def _get_contact_pixbuf_or_default(self, contact):
         '''try to return a pixbuf of the user picture or the default
@@ -877,7 +921,7 @@ class ContactList(gui.ContactList, gtk.TreeView):
 
     def _on_drag_drop(self, widget, drag_context, x, y, time):
         drag_context.finish(True, False, time)
-        if self.session.config.b_order_by_group:    
+        if self.session.config.b_order_by_group:
             group_src = self.get_contact_selected_group()
 
             try:
