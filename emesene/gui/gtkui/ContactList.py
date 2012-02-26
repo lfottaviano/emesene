@@ -196,6 +196,11 @@ class ContactList(gui.ContactList, gtk.TreeView):
         if not self.thread_order_by is None:
             self.thread_order_by = None
             print "Thread: thread_order_by going to dead."
+            
+        gtk.gdk.threads_enter()
+        self.model.refilter()
+        gtk.gdk.threads_leave()
+
 
 
     def _get_contact_pixbuf_or_default(self, contact):
@@ -270,7 +275,7 @@ class ContactList(gui.ContactList, gtk.TreeView):
                 # get a list of contact objects from a list of accounts
                 contacts = self.contacts.get_contacts(obj.contacts)
                 con_on, con_tot = self.contacts.get_online_total_count(contacts)
-                if con_on == 0:
+                if con_on == 0 and self.thread_order_by is None:
                     return False
 
                 if not self.show_blocked:
