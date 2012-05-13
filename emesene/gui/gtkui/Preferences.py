@@ -56,6 +56,9 @@ class Preferences(gtk.Window):
         self.set_border_width(2)
         self.set_title(_("Preferences"))
         self.session = session
+        
+        self._language_management = extension.get_and_instantiate('language')
+        self._language_management.subscribe(self)
 
         self.LIST = [
             {'stock_id' : gtk.STOCK_PAGE_SETUP,'text' : _('Main Window')},
@@ -149,6 +152,22 @@ class Preferences(gtk.Window):
         self.connect('delete_event', self.hide_on_delete)
         self.add(vbox)
         vbox.show_all()
+
+    def translate(self):
+        
+        self.LIST = [
+            {'stock_id' : gtk.STOCK_PAGE_SETUP,'text' : _('Main Window')},
+            {'stock_id' : gtk.STOCK_PAGE_SETUP,'text' : _('Conversation Window')},
+            {'stock_id' : gtk.STOCK_FLOPPY,'text' : _('General')},
+            {'stock_id' : gtk.STOCK_MEDIA_PLAY,'text' : _('Sounds')},
+            {'stock_id' : gtk.STOCK_LEAVE_FULLSCREEN,'text' : _('Notifications')},
+            {'stock_id' : gtk.STOCK_SELECT_COLOR,'text' : _('Theme')},
+            {'stock_id' : gtk.STOCK_EXECUTE,'text' : _('Extensions')},
+            {'stock_id' : gtk.STOCK_DISCONNECT,'text' : _('Plugins')},
+            {'stock_id' : gtk.STOCK_REFRESH,'text' : _('Updates')},
+        ]
+
+        self.__refresh_list()
 
     if gui.gtkui.check_gtk3():
         def hide_on_delete(self, event, data):
@@ -1147,15 +1166,22 @@ class DesktopTab(BaseTable):
         BaseTable.__init__(self, 3, 2)
         self.set_border_width(5)
         self.session = session
+        self._build()
+        self._language_management = extension.get_and_instantiate('language')
+        self._language_management.subscribe(self)
 
+        
+    def translate(self):
+        self._language_management.unsubscribe(self)
+        self._build()
+
+    def _build(self):
         self.append_markup('<b>'+_('Logger')+'</b>')
         self.append_check(_('Enable logger'),
                           'session.config.b_log_enabled')
                           
         # language settings
         self.append_markup('<b>'+_('Language')+'</b>')
-        # languages combobox
-        self._language_management = Language()
 
         self.session.config.subscribe(self._on_language_changed,
                                       'language_config')
@@ -1166,6 +1192,8 @@ class DesktopTab(BaseTable):
         index = 1
         combo_store = gtk.ListStore(str, str)
         combo_store.append((None, _('Automatic detection')))
+
+        self._language_management = extension.get_and_instantiate('language')
 
         lang_dict = self._language_management.LANGUAGES_DICT
 

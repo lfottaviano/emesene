@@ -150,13 +150,14 @@ class Controller(object):
         self.conv_manager_available = False
         self.last_session_account = None
         self.last_session_service = None
-      
-        lang = self.config.get_or_set("language_config", None)
-        
-        language_management.install_desired_translation(lang)
-
+     
         self._parse_commandline()
         self._setup()
+
+        lang = self.config.get_or_set("language_config", None)
+
+        language_management = extension.get_and_instantiate('language')
+        language_management.install_desired_translation(lang)
 
         if hasattr(signal, 'SIGINT'):
             signal.signal(signal.SIGINT,
@@ -170,6 +171,10 @@ class Controller(object):
 
     def _setup(self):
         '''register core extensions'''
+        
+        extension.category_register('language', Language, 
+                single_instance=True)
+        
         extension.category_register('session', dummy.Session,
                 single_instance=True)
         if jabber is not None:
@@ -690,6 +695,8 @@ class Controller(object):
         self.window.content.contact_list.fill()
 
         self.on_pending_contacts()
+
+        glib.timeout_add(500, self.session.logger.check)
 
         notificationcls = extension.get_default('notification')
         self.notification = notificationcls(self.session)

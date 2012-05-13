@@ -111,7 +111,26 @@ class Language(object):
         self._locales_path = 'po/' if os.path.exists('po/') else None
 
         self._get_languages_list()
+        
+        self.observers_list = []
 
+    
+    def subscribe(self, observer):
+        if observer in self.observers_list:
+            return
+
+        self.observers_list.append(observer)
+    
+    def unsubscribe(self, observer):
+        if observer in self.observers_list:
+            self.observers_list.remove(observer)
+
+    def notify(self):
+        print "Language: Notify called."
+        for observer in self.observers_list:
+            print "notifing...",  observer
+            observer.translate()
+    
     def install_desired_translation(self,  language):
         """
         installs translation of the given @language
@@ -139,6 +158,7 @@ class Language(object):
             self._lang = 'en'
 
         translation.install()
+        self.notify()
 
     def install_default_translation(self):
         """

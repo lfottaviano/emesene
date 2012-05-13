@@ -69,6 +69,15 @@ class MainMenu(gtk.MenuBar):
         self.append(self.actions)
         self.append(self.options)
         self.append(self.help)
+        
+        self._language_management = extension.get_and_instantiate('language')
+        self._language_management.subscribe(self)
+
+    def translate(self):
+        self.file.set_label(_('_File'))
+        self.actions.set_label(_('_Actions'))
+        self.options.set_label(_('_Options'))
+        self.help.set_label(_('_Help'))
 
     def set_accels(self, accel_group):
         """
@@ -122,6 +131,12 @@ class FileMenu(gtk.Menu):
         self.append(self.disconnect)
         self.append(gtk.SeparatorMenuItem())
         self.append(self.quit)
+        
+        self._language_management = extension.get_and_instantiate('language')
+        self._language_management.subscribe(self)
+
+    def translate(self):
+        self.status.set_label(_('Status'))
 
 class ActionsMenu(gtk.Menu):
     """
@@ -136,6 +151,7 @@ class ActionsMenu(gtk.Menu):
         """
         gtk.Menu.__init__(self)
         self.handler = handler
+        self.session = session
 
         ContactsMenu = extension.get_default('menu contact')
         AccountMenu = extension.get_default('menu account')
@@ -163,6 +179,17 @@ class ActionsMenu(gtk.Menu):
             self.append(self.group)
 
         self.append(self.myaccount)
+        self._language_management = extension.get_and_instantiate('language')
+        self._language_management.subscribe(self)
+
+    def translate(self):
+        self.contact.set_label(_('_Contact'))
+        self.account.set_label(_('_Account'))
+        self.myaccount.set_label(_('_Profile'))
+        
+        if self.session.session_has_service(e3.Session.SERVICE_GROUP_MANAGING):
+            self.group.set_label(_('_Group'))
+
 
 class OptionsMenu(gtk.Menu):
     """
