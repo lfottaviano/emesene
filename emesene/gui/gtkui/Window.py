@@ -121,6 +121,8 @@ class Window(gtk.Window):
     def on_disconnect(self, cb_on_close):
         '''called when the user is disconnected'''
         self.cb_on_close = cb_on_close
+        self.content.destroy_all()
+        self.content.destroy()
 
     def go_conversation(self, session):
         '''change to a conversation window'''

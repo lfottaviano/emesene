@@ -70,6 +70,12 @@ class MainMenu(gtk.MenuBar):
         self.append(self.options)
         self.append(self.help)
 
+    def destroy_children(self):
+        self.file.destroy()
+        self.help.destroy()
+        self.actions.destroy()
+        self.options.destroy()
+
     def set_accels(self, accel_group):
         """
         Set accelerators for menu items

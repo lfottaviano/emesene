@@ -196,6 +196,22 @@ class MainWindow(gtk.VBox, gui.MainWindowBase):
             GroupMenu = extension.get_default('menu group')
             self.group_menu = GroupMenu(group_handler)
             self.group_menu.show_all()
+            
+    def destroy_all(self):
+        print "Destroying all...",  self
+        self.menu.destroy_children()
+        self.menu.destroy()
+        self.below_menu.destroy()
+        self.below_panel.destroy()
+        self.below_userlist.destroy()
+        del self.menu
+        del self.below_menu
+        del self.below_panel
+        del self.below_userlist
+        self.contact_list.destroy_all()
+        self.contact_list.destroy()
+        del self.contact_list
+
 
     def set_accels(self):
         ''' set accels group to the given window '''

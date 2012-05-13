@@ -645,6 +645,24 @@ class ContactList(gui.ContactList, gtk.TreeView):
 
                         self.update_group(group)
 
+    
+    def destroy_all(self):
+        for row in self._model:
+            obj = row[1]
+            # if we get a group we go through the contacts
+            if isinstance(obj, e3.Group):
+                for contact_row in row.iterchildren():
+                    con = contact_row[1]
+                    # we remove it from tree and from group.
+                    self._model.remove(contact_row.iter)
+                    del con
+
+            self._model.remove(row.iter)
+            del obj # CHECK!!!!!
+
+        self.clear()
+
+    
     def clear(self):
         '''clear the contact list, return True if the list was cleared
         False otherwise (normally returns false when clear is called before

@@ -246,6 +246,10 @@ class LoginBaseUI(gtk.Alignment):
         self.add(vbox)
         vbox.show_all()
 
+    def destroy_all(self):
+        return
+
+
     def _on_cancel_clicked(self, button):
         '''
         overload this
